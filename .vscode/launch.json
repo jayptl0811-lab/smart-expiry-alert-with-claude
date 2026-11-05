@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "ExpireGuard — localhost (Service Worker enabled)",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "start-server"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "ExpireGuard — file:// (no Service Worker)",
+            "file": "c:\\Users\\Margi Patel\\Desktop\\Desktop\\smart expiry alert with claude\\expiry_alert.html"
+        }
+    ]
+}

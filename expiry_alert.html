@@ -1,0 +1,3769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExpireGuard — Never Let Things Expire Again</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════
+   DESIGN TOKENS & RESET
+═══════════════════════════════════════════════ */
+    :root {
+      --bg-void: #080c14;
+      --bg-deep: #0d1220;
+      --bg-card: #111827;
+      --bg-card2: #151f30;
+      --bg-glass: rgba(17, 24, 39, 0.7);
+      --bg-input: #0d1525;
+      --border: rgba(255, 255, 255, 0.06);
+      --border-glow: rgba(255, 160, 50, 0.3);
+      --amber: #ff9f2e;
+      --amber-dim: #cc7a1a;
+      --amber-glow: rgba(255, 159, 46, 0.15);
+      --amber-text: #ffb84d;
+      --red: #ff4757;
+      --red-dim: rgba(255, 71, 87, 0.15);
+      --green: #2ed573;
+      --green-dim: rgba(46, 213, 115, 0.15);
+      --blue: #1e90ff;
+      --blue-dim: rgba(30, 144, 255, 0.15);
+      --text-primary: #f0f4ff;
+      --text-secondary: #7a8aaa;
+      --text-muted: #3d4d6a;
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 40px rgba(255, 159, 46, 0.12);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --sidebar-w: 260px;
+    }
+
+    [data-theme="light"] {
+      --bg-void: #f0f4ff;
+      --bg-deep: #e8edf8;
+      --bg-card: #ffffff;
+      --bg-card2: #f5f8ff;
+      --bg-glass: rgba(255, 255, 255, 0.8);
+      --bg-input: #f0f4ff;
+      --border: rgba(0, 0, 0, 0.08);
+      --text-primary: #0d1525;
+      --text-secondary: #4a5568;
+      --text-muted: #a0aec0;
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-void);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    button {
+      font-family: var(--font-body);
+      cursor: pointer;
+      border: none;
+      outline: none
+    }
+
+    input,
+    textarea,
+    select {
+      font-family: var(--font-body);
+      outline: none
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    img {
+      display: block
+    }
+
+    /* ═══════════════════════════════════════════════
+   BACKGROUND MESH
+═══════════════════════════════════════════════ */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(255, 159, 46, 0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(30, 144, 255, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(255, 71, 87, 0.03) 0%, transparent 70%);
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ═══════════════════════════════════════════════
+   PAGE SYSTEM
+═══════════════════════════════════════════════ */
+    .page {
+      display: none;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      animation: pageFadeIn 0.4s ease
+    }
+
+    .page.active {
+      display: flex
+    }
+
+    @keyframes pageFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* ═══════════════════════════════════════════════
+   AUTH PAGES
+═══════════════════════════════════════════════ */
+    .auth-page {
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      flex-direction: column;
+    }
+
+    .auth-brand {
+      text-align: center;
+      margin-bottom: 40px
+    }
+
+    .auth-brand .logo-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--amber), #ff6b35);
+      border-radius: 18px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 8px 32px rgba(255, 159, 46, 0.4);
+      animation: logoPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes logoPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 8px 32px rgba(255, 159, 46, 0.4)
+      }
+
+      50% {
+        box-shadow: 0 8px 48px rgba(255, 159, 46, 0.7)
+      }
+    }
+
+    .auth-brand h1 {
+      font-family: var(--font-head);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px
+    }
+
+    .auth-brand h1 span {
+      color: var(--amber)
+    }
+
+    .auth-brand p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 4px
+    }
+
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(20px);
+    }
+
+    .auth-card h2 {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 6px
+    }
+
+    .auth-card .auth-sub {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: 28px
+    }
+
+    .form-group {
+      margin-bottom: 18px
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 8px
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .form-input:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-glow)
+    }
+
+    .form-input.error {
+      border-color: var(--red)
+    }
+
+    .form-error {
+      color: var(--red);
+      font-size: 0.78rem;
+      margin-top: 5px;
+      display: none
+    }
+
+    .form-error.show {
+      display: block
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .btn:hover::after {
+      opacity: 1
+    }
+
+    .btn:active {
+      transform: scale(0.97)
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--amber), #ff6b35);
+      color: #000;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(255, 159, 46, 0.3);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 28px rgba(255, 159, 46, 0.5);
+      transform: translateY(-1px)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border)
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--amber);
+      color: var(--amber)
+    }
+
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(255, 71, 87, 0.2)
+    }
+
+    .btn-danger:hover {
+      background: var(--red);
+      color: #fff
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 0.8rem
+    }
+
+    .auth-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.85rem;
+      color: var(--text-secondary)
+    }
+
+    .auth-link a {
+      color: var(--amber);
+      font-weight: 600
+    }
+
+    .auth-link a:hover {
+      text-decoration: underline
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px
+    }
+
+    .toggle-check {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--amber);
+      cursor: pointer;
+    }
+
+    /* ═══════════════════════════════════════════════
+   APP LAYOUT
+═══════════════════════════════════════════════ */
+    .app-layout {
+      flex-direction: row;
+      width: 100%
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 100;
+      transition: transform var(--transition);
+    }
+
+    .sidebar-brand {
+      padding: 28px 24px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-brand .logo-sm {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--amber), #ff6b35);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(255, 159, 46, 0.3);
+    }
+
+    .sidebar-brand .brand-text h2 {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 800
+    }
+
+    .sidebar-brand .brand-text span {
+      font-size: 0.7rem;
+      color: var(--amber);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 12px;
+      overflow-y: auto
+    }
+
+    .nav-section {
+      margin-bottom: 24px
+    }
+
+    .nav-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 12px;
+      margin-bottom: 8px
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-card2);
+      color: var(--text-primary)
+    }
+
+    .nav-item.active {
+      background: var(--amber-glow);
+      color: var(--amber);
+      border: 1px solid rgba(255, 159, 46, 0.2)
+    }
+
+    .nav-item .nav-icon {
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      font-size: 16px
+    }
+
+    .nav-item .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .user-card:hover {
+      background: var(--bg-card2)
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .user-info .user-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .user-info .user-email {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .logout-btn {
+      background: transparent;
+      color: var(--text-muted);
+      padding: 6px;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: all var(--transition);
+    }
+
+    .logout-btn:hover {
+      background: var(--red-dim);
+      color: var(--red)
+    }
+
+    /* ═══════════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════════ */
+    .main-content {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-left h1 {
+      font-family: var(--font-head);
+      font-size: 1.4rem;
+      font-weight: 700
+    }
+
+    .topbar-left p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 2px
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--amber);
+      color: var(--amber)
+    }
+
+    .notif-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      border: 2px solid var(--bg-void);
+      animation: pulseDot 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.3)
+      }
+    }
+
+    .content-area {
+      padding: 32px;
+      flex: 1
+    }
+
+    /* ═══════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition), box-shadow var(--transition);
+      animation: cardReveal 0.5s ease both;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-glow)
+    }
+
+    @keyframes cardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .stat-card:nth-child(1) {
+      animation-delay: 0.05s
+    }
+
+    .stat-card:nth-child(2) {
+      animation-delay: 0.1s
+    }
+
+    .stat-card:nth-child(3) {
+      animation-delay: 0.15s
+    }
+
+    .stat-card:nth-child(4) {
+      animation-delay: 0.2s
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .stat-card.total::before {
+      background: linear-gradient(90deg, var(--amber), #ff6b35)
+    }
+
+    .stat-card.expired::before {
+      background: var(--red)
+    }
+
+    .stat-card.soon::before {
+      background: #ff9f2e
+    }
+
+    .stat-card.safe::before {
+      background: var(--green)
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card.total .stat-icon {
+      background: var(--amber-glow)
+    }
+
+    .stat-card.expired .stat-icon {
+      background: var(--red-dim)
+    }
+
+    .stat-card.soon .stat-icon {
+      background: rgba(255, 159, 46, 0.15)
+    }
+
+    .stat-card.safe .stat-icon {
+      background: var(--green-dim)
+    }
+
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      font-weight: 500
+    }
+
+    .stat-change {
+      font-size: 0.72rem;
+      margin-top: 8px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 1rem;
+      font-weight: 700
+    }
+
+    .section-action {
+      font-size: 0.8rem;
+      color: var(--amber);
+      cursor: pointer;
+      font-weight: 600
+    }
+
+    .section-action:hover {
+      text-decoration: underline
+    }
+
+    /* Timeline */
+    .timeline-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      cursor: pointer;
+    }
+
+    .timeline-item:hover {
+      background: var(--bg-card2)
+    }
+
+    .timeline-item:last-child {
+      border-bottom: none
+    }
+
+    .ti-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .ti-dot.expired {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red)
+    }
+
+    .ti-dot.soon {
+      background: var(--amber);
+      box-shadow: 0 0 8px var(--amber)
+    }
+
+    .ti-dot.week {
+      background: #ffd700;
+      box-shadow: 0 0 8px #ffd700
+    }
+
+    .ti-dot.safe {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green)
+    }
+
+    .ti-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .ti-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .ti-cat {
+      font-size: 0.72rem;
+      color: var(--text-muted)
+    }
+
+    .ti-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    .ti-badge.expired {
+      background: var(--red-dim);
+      color: var(--red)
+    }
+
+    .ti-badge.soon {
+      background: var(--amber-glow);
+      color: var(--amber)
+    }
+
+    .ti-badge.week {
+      background: rgba(255, 215, 0, 0.1);
+      color: #ffd700
+    }
+
+    .ti-badge.safe {
+      background: var(--green-dim);
+      color: var(--green)
+    }
+
+    /* Donut Chart */
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .donut-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 16px auto
+    }
+
+    .donut-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg)
+    }
+
+    .donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .donut-center .dc-val {
+      font-family: var(--font-head);
+      font-size: 1.8rem;
+      font-weight: 800
+    }
+
+    .donut-center .dc-label {
+      font-size: 0.7rem;
+      color: var(--text-muted)
+    }
+
+    .chart-legend {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .legend-name {
+      flex: 1;
+      color: var(--text-secondary)
+    }
+
+    .legend-pct {
+      font-weight: 600;
+      color: var(--text-primary)
+    }
+
+    /* ═══════════════════════════════════════════════
+   ITEMS PAGE
+═══════════════════════════════════════════════ */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .search-input-wrap .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .search-input-wrap input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .search-input-wrap input:focus {
+      border-color: var(--amber)
+    }
+
+    .filter-select {
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      border-color: var(--amber)
+    }
+
+    .items-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: all var(--transition);
+      animation: cardReveal 0.3s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .item-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px;
+    }
+
+    .item-card.expired::before {
+      background: var(--red)
+    }
+
+    .item-card.soon::before {
+      background: var(--amber)
+    }
+
+    .item-card.week::before {
+      background: #ffd700
+    }
+
+    .item-card.safe::before {
+      background: var(--green)
+    }
+
+    .item-card:hover {
+      transform: translateX(3px);
+      border-color: rgba(255, 255, 255, 0.1)
+    }
+
+    .item-emoji {
+      font-size: 24px;
+      width: 40px;
+      text-align: center;
+      flex-shrink: 0
+    }
+
+    .item-info {
+      flex: 1;
+      min-width: 0
+    }
+
+    .item-name {
+      font-weight: 600;
+      font-size: 0.9rem
+    }
+
+    .item-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      display: flex;
+      gap: 12px
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0
+    }
+
+    .act-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .act-btn.edit:hover {
+      border-color: var(--amber);
+      color: var(--amber)
+    }
+
+    .act-btn.del:hover {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-dim)
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      justify-content: center
+    }
+
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .page-btn.active {
+      background: var(--amber);
+      color: #000;
+      border-color: var(--amber);
+      font-weight: 700
+    }
+
+    .page-btn:hover:not(.active) {
+      border-color: var(--amber);
+      color: var(--amber)
+    }
+
+    /* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition);
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 520px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 28px;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0)
+    }
+
+    .modal-drag {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 24px
+    }
+
+    .modal-title {
+      font-family: var(--font-head);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    .modal-sub {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px
+    }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px
+    }
+
+    .cat-btn {
+      padding: 12px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      transition: all var(--transition);
+    }
+
+    .cat-btn .cat-icon {
+      font-size: 22px
+    }
+
+    .cat-btn:hover,
+    .cat-btn.active {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: var(--amber-glow)
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .form-footer {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px
+    }
+
+    .alert-row {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .alert-slider {
+      flex: 1;
+      accent-color: var(--amber);
+      cursor: pointer;
+    }
+
+    .alert-val {
+      min-width: 60px;
+      text-align: center;
+      font-weight: 700;
+      color: var(--amber);
+      font-size: 0.875rem;
+    }
+
+    /* ═══════════════════════════════════════════════
+   NOTIFICATIONS PANEL
+═══════════════════════════════════════════════ */
+    .notif-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 380px;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 150;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .notif-panel.open {
+      transform: translateX(0)
+    }
+
+    .notif-panel-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notif-panel-header h3 {
+      font-family: var(--font-head);
+      font-size: 1rem;
+      font-weight: 700
+    }
+
+    .notif-actions {
+      display: flex;
+      gap: 8px
+    }
+
+    .notif-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px
+    }
+
+    .notif-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .notif-item:hover {
+      border-color: var(--amber)
+    }
+
+    .notif-item.unread {
+      border-left: 3px solid var(--amber)
+    }
+
+    .notif-icon {
+      font-size: 22px;
+      flex-shrink: 0
+    }
+
+    .notif-body .notif-title {
+      font-size: 0.85rem;
+      font-weight: 600
+    }
+
+    .notif-body .notif-time {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 3px
+    }
+
+    .notif-overlay-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 149;
+      background: transparent;
+      display: none;
+    }
+
+    .notif-overlay-bg.open {
+      display: block
+    }
+
+    /* ═══════════════════════════════════════════════
+   SETTINGS PAGE
+═══════════════════════════════════════════════ */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px
+    }
+
+    .settings-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .settings-card h3 {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none
+    }
+
+    .toggle-label {
+      font-size: 0.875rem
+    }
+
+    .toggle-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted)
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .toggle input:checked+.toggle-slider {
+      background: var(--amber);
+      border-color: var(--amber)
+    }
+
+    .toggle input:checked+.toggle-slider::before {
+      transform: translateX(20px);
+      background: #fff
+    }
+
+    .settings-slider-wrap {
+      margin-top: 12px
+    }
+
+    .settings-slider-wrap label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px
+    }
+
+    .settings-slider-wrap label span {
+      color: var(--amber);
+      font-weight: 700
+    }
+
+    input[type=range].full-slider {
+      width: 100%;
+      accent-color: var(--amber);
+      cursor: pointer;
+    }
+
+    /* ═══════════════════════════════════════════════
+   FAB
+═══════════════════════════════════════════════ */
+    .fab {
+      position: fixed;
+      right: 32px;
+      bottom: 32px;
+      z-index: 90;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--amber), #ff6b35);
+      box-shadow: 0 8px 24px rgba(255, 159, 46, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #000;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-weight: 700;
+    }
+
+    .fab:hover {
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 12px 32px rgba(255, 159, 46, 0.7)
+    }
+
+    /* ═══════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+═══════════════════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      font-size: 0.875rem;
+      font-weight: 500;
+      pointer-events: all;
+      animation: toastIn 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      min-width: 280px;
+      max-width: 360px;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(100px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0)
+      }
+    }
+
+    .toast.removing {
+      animation: toastOut 0.3s ease forwards
+    }
+
+    @keyframes toastOut {
+      to {
+        opacity: 0;
+        transform: translateX(100px)
+      }
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--green)
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--red)
+    }
+
+    .toast.info {
+      border-left: 3px solid var(--amber)
+    }
+
+    .toast.warn {
+      border-left: 3px solid #ffd700
+    }
+
+    .toast-icon {
+      font-size: 18px
+    }
+
+    .toast-close {
+      margin-left: auto;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0
+    }
+
+    .toast-close:hover {
+      color: var(--text-primary)
+    }
+
+    /* ═══════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════ */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5
+    }
+
+    .empty-state h3 {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px
+    }
+
+    .empty-state p {
+      font-size: 0.85rem
+    }
+
+    /* ═══════════════════════════════════════════════
+   CONFIRM DIALOG
+═══════════════════════════════════════════════ */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition);
+    }
+
+    .confirm-overlay.open {
+      opacity: 1;
+      pointer-events: all
+    }
+
+    .confirm-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 340px;
+      transform: scale(0.9);
+      transition: transform var(--transition);
+    }
+
+    .confirm-overlay.open .confirm-box {
+      transform: scale(1)
+    }
+
+    .confirm-box h3 {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px
+    }
+
+    .confirm-box p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px
+    }
+
+    .confirm-btns {
+      display: flex;
+      gap: 10px
+    }
+
+    /* ═══════════════════════════════════════════════
+   NOTIFICATIONS PAGE
+═══════════════════════════════════════════════ */
+    .notif-page-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .notif-page-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+    }
+
+    .notif-page-item.unread {
+      border-left: 3px solid var(--amber)
+    }
+
+    .notif-page-item:hover {
+      transform: translateX(3px)
+    }
+
+    /* ═══════════════════════════════════════════════
+   SKELETON
+═══════════════════════════════════════════════ */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card2) 50%, var(--bg-card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: 200% 0
+      }
+
+      to {
+        background-position: -200% 0
+      }
+    }
+
+    /* ═══════════════════════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════════════════════ */
+    .mobile-topbar {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 20px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mobile-topbar h2 {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700
+    }
+
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 8px 0 12px;
+      flex-direction: row;
+    }
+
+    .bn-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 4px;
+      cursor: pointer;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      transition: color var(--transition);
+      position: relative;
+    }
+
+    .bn-item .bn-icon {
+      font-size: 20px
+    }
+
+    .bn-item.active {
+      color: var(--amber)
+    }
+
+    .bn-badge {
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      transform: translateX(4px);
+      background: var(--red);
+      color: #fff;
+      font-size: 0.55rem;
+      font-weight: 700;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media(max-width:900px) {
+      .sidebar {
+        transform: translateX(-100%)
+      }
+
+      .sidebar.mob-open {
+        transform: translateX(0)
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding-top: 64px;
+        padding-bottom: 80px
+      }
+
+      .mobile-topbar {
+        display: flex
+      }
+
+      .bottom-nav {
+        display: flex
+      }
+
+      .fab {
+        bottom: 96px;
+        right: 20px
+      }
+
+      .content-area {
+        padding: 20px
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr
+      }
+
+      .settings-grid {
+        grid-template-columns: 1fr
+      }
+
+      .topbar {
+        display: none
+      }
+
+      .notif-panel {
+        width: 100%
+      }
+
+      .form-row {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media(max-width:480px) {
+      .auth-card {
+        padding: 24px
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px
+      }
+
+      .stat-value {
+        font-size: 1.8rem
+      }
+    }
+
+    /* ═══════════════════════════════════════════════
+   MISC UTILITIES
+═══════════════════════════════════════════════ */
+    .text-amber {
+      color: var(--amber)
+    }
+
+    .text-red {
+      color: var(--red)
+    }
+
+    .text-green {
+      color: var(--green)
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    .spin {
+      animation: spin 1s linear infinite
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0
+    }
+
+    .badge-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--red);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      padding: 0 6px;
+    }
+
+    .full-width {
+      width: 100%
+    }
+
+    .mt-8 {
+      margin-top: 8px
+    }
+
+    .mt-16 {
+      margin-top: 16px
+    }
+
+    .mt-24 {
+      margin-top: 24px
+    }
+
+    .flex-center {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .gap-8 {
+      gap: 8px
+    }
+
+    .no-items-msg {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-mesh"></div>
+  <div class="bg-grid"></div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmMsg">This action cannot be undone.</p>
+      <div class="confirm-btns">
+        <button class="btn btn-ghost full-width" onclick="confirmCancel()">Cancel</button>
+        <button class="btn btn-danger full-width" id="confirmOkBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION PANEL -->
+  <div class="notif-overlay-bg" id="notifOverlayBg" onclick="closeNotifPanel()"></div>
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">
+      <div>
+        <h3>🔔 Notifications</h3>
+        <div id="unreadCountLabel" style="font-size:0.75rem;color:var(--text-muted);margin-top:2px"></div>
+      </div>
+      <div class="notif-actions">
+        <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark all read</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearAllNotifs()">Clear</button>
+        <button class="icon-btn" onclick="closeNotifPanel()" style="width:32px;height:32px">✕</button>
+      </div>
+    </div>
+    <div class="notif-list" id="notifPanelList"></div>
+  </div>
+
+  <!-- ADD/EDIT MODAL -->
+  <div class="modal-overlay" id="itemModal">
+    <div class="modal">
+      <div class="modal-drag"></div>
+      <h2 class="modal-title" id="modalTitle">Add New Item</h2>
+      <p class="modal-sub">Track expiry dates and get alerts before it's too late</p>
+      <div class="form-group">
+        <label class="form-label">Item Name</label>
+        <input type="text" class="form-input" id="itemName" placeholder="e.g. 🥛 Milk, 💊 Aspirin...">
+        <div class="form-error" id="itemNameErr">Please enter item name</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <div class="cat-grid" id="catGrid">
+          <button class="cat-btn" data-cat="Food" onclick="selectCat(this)"><span
+              class="cat-icon">🍎</span>Food</button>
+          <button class="cat-btn" data-cat="Medicine" onclick="selectCat(this)"><span
+              class="cat-icon">💊</span>Medicine</button>
+          <button class="cat-btn" data-cat="Documents" onclick="selectCat(this)"><span
+              class="cat-icon">📄</span>Documents</button>
+          <button class="cat-btn" data-cat="Cosmetics" onclick="selectCat(this)"><span
+              class="cat-icon">💄</span>Cosmetics</button>
+          <button class="cat-btn" data-cat="Electronics" onclick="selectCat(this)"><span
+              class="cat-icon">🔋</span>Electronics</button>
+          <button class="cat-btn" data-cat="Custom" onclick="selectCat(this)"><span
+              class="cat-icon">📦</span>Custom</button>
+        </div>
+        <div class="form-error" id="itemCatErr">Please select a category</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Expiry Date</label>
+          <input type="date" class="form-input" id="itemExpiry">
+          <div class="form-error" id="itemExpiryErr">Please select expiry date</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <div style="display:flex;gap:8px">
+            <input type="number" class="form-input" id="itemQty" placeholder="1" min="0" style="width:80px">
+            <select class="form-input filter-select" id="itemUnit" style="flex:1">
+              <option>pcs</option>
+              <option>kg</option>
+              <option>g</option>
+              <option>L</option>
+              <option>ml</option>
+              <option>box</option>
+              <option>bottle</option>
+              <option>pack</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alert me before (days)</label>
+        <div class="alert-row">
+          <input type="range" class="alert-slider" id="alertDays" min="1" max="30" value="7"
+            oninput="document.getElementById('alertDaysVal').textContent=this.value+' days'">
+          <span class="alert-val" id="alertDaysVal">7 days</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes <span style="color:var(--text-muted)">(optional)</span></label>
+        <textarea class="form-input" id="itemNotes" rows="2" placeholder="Any extra details..."></textarea>
+      </div>
+      <div class="form-footer">
+        <button class="btn btn-ghost full-width" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary full-width" onclick="saveItem()">
+          <span id="saveItemTxt">Save Item</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ LOGIN PAGE ═══════ -->
+  <div class="page auth-page" id="page-login">
+    <div class="auth-brand">
+      <div class="logo-icon">⏰</div>
+      <h1>Expire<span>Guard</span></h1>
+      <p>Smart expiry tracking, always one step ahead</p>
+    </div>
+    <div class="auth-card">
+      <h2>Welcome back</h2>
+      <p class="auth-sub">Sign in to manage your expiry tracking</p>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="you@example.com">
+        <div class="form-error" id="loginEmailErr">Please enter a valid email</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="loginPass" placeholder="••••••••">
+        <div class="form-error" id="loginPassErr">Invalid email or password</div>
+      </div>
+      <div class="remember-row">
+        <input type="checkbox" class="toggle-check" id="rememberMe">
+        <label for="rememberMe" style="font-size:0.875rem;cursor:pointer;color:var(--text-secondary)">Remember
+          me</label>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In →</button>
+      <div class="auth-link">Don't have an account? <a onclick="navigate('register')">Create one</a></div>
+    </div>
+  </div>
+
+  <!-- ═══════ REGISTER PAGE ═══════ -->
+  <div class="page auth-page" id="page-register">
+    <div class="auth-brand">
+      <div class="logo-icon">⏰</div>
+      <h1>Expire<span>Guard</span></h1>
+      <p>Create your account and start tracking</p>
+    </div>
+    <div class="auth-card">
+      <h2>Create account</h2>
+      <p class="auth-sub">Join thousands who never let things expire</p>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" id="regName" placeholder="John Doe">
+        <div class="form-error" id="regNameErr">Please enter your name</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-input" id="regEmail" placeholder="you@example.com">
+        <div class="form-error" id="regEmailErr">Please enter a valid email</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="regPass" placeholder="Min. 6 characters">
+        <div class="form-error" id="regPassErr">Password must be at least 6 characters</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" class="form-input" id="regPass2" placeholder="Repeat password">
+        <div class="form-error" id="regPass2Err">Passwords do not match</div>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">Create Account →</button>
+      <div class="auth-link">Already have an account? <a onclick="navigate('login')">Sign in</a></div>
+    </div>
+  </div>
+
+  <!-- ═══════ APP SHELL ═══════ -->
+  <div class="page app-layout" id="page-app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-sm">⏰</div>
+        <div class="brand-text">
+          <h2>ExpireGuard</h2>
+          <span>v1.0.0 Pro</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-label">Main</div>
+          <div class="nav-item active" onclick="showView('dashboard')" id="nav-dashboard">
+            <span class="nav-icon">📊</span> Dashboard
+          </div>
+          <div class="nav-item" onclick="showView('items')" id="nav-items">
+            <span class="nav-icon">📦</span> All Items
+          </div>
+          <div class="nav-item" onclick="openModal()" id="nav-add">
+            <span class="nav-icon">➕</span> Add Item
+          </div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">Alerts</div>
+          <div class="nav-item" onclick="showView('notifications')" id="nav-notifications">
+            <span class="nav-icon">🔔</span> Notifications
+            <span class="nav-badge hidden" id="navNotifBadge">0</span>
+          </div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">Account</div>
+          <div class="nav-item" onclick="showView('settings')" id="nav-settings">
+            <span class="nav-icon">⚙️</span> Settings
+          </div>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-card" onclick="showView('settings')">
+          <div class="avatar" id="sidebarAvatar"></div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarUserName">Loading...</div>
+            <div class="user-email" id="sidebarUserEmail">...</div>
+          </div>
+          <button class="logout-btn" onclick="event.stopPropagation();confirmLogout()" title="Logout">🚪</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+      <!-- DESKTOP TOPBAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <h1 id="topbarTitle">Dashboard</h1>
+          <p id="topbarGreeting">Loading...</p>
+        </div>
+        <div class="topbar-right">
+          <div class="icon-btn" onclick="toggleTheme()" title="Toggle theme" id="themeBtn">🌙</div>
+          <div class="icon-btn" onclick="openNotifPanel()" title="Notifications" id="notifBell">
+            🔔
+            <div class="notif-dot hidden" id="notifDot"></div>
+          </div>
+          <div class="avatar" id="topbarAvatar" style="cursor:pointer" onclick="showView('settings')"></div>
+        </div>
+      </div>
+
+      <!-- MOBILE TOPBAR -->
+      <div class="mobile-topbar">
+        <button class="icon-btn" onclick="toggleSidebar()">☰</button>
+        <h2>ExpireGuard</h2>
+        <div class="icon-btn" onclick="openNotifPanel()" style="position:relative">
+          🔔
+          <div class="notif-dot hidden" id="mobileNotifDot"></div>
+        </div>
+      </div>
+
+      <!-- CONTENT AREA -->
+      <div class="content-area">
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard">
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card total">
+              <div class="stat-icon">📦</div>
+              <div class="stat-value" id="statTotal">0</div>
+              <div class="stat-label">Total Items</div>
+              <div class="stat-change text-amber">↑ All tracked</div>
+            </div>
+            <div class="stat-card expired">
+              <div class="stat-icon">🚨</div>
+              <div class="stat-value text-red" id="statExpired">0</div>
+              <div class="stat-label">Expired</div>
+              <div class="stat-change text-red" id="statExpiredChange">Needs attention</div>
+            </div>
+            <div class="stat-card soon">
+              <div class="stat-icon">⚠️</div>
+              <div class="stat-value text-amber" id="statSoon">0</div>
+              <div class="stat-label">Expiring Soon</div>
+              <div class="stat-change text-amber">Within 7 days</div>
+            </div>
+            <div class="stat-card safe">
+              <div class="stat-icon">✅</div>
+              <div class="stat-value text-green" id="statSafe">0</div>
+              <div class="stat-label">Safe Items</div>
+              <div class="stat-change text-green">No action needed</div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="timeline-card">
+              <div class="section-header">
+                <span class="section-title">📅 Expiry Timeline</span>
+                <span class="section-action" onclick="showView('items')">View all →</span>
+              </div>
+              <div id="timelineList">
+                <div class="no-items-msg">No items tracked yet. Add your first item!</div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="section-header">
+                <span class="section-title">📊 Categories</span>
+              </div>
+              <div class="donut-wrap">
+                <svg class="donut-svg" viewBox="0 0 120 120" id="donutSvg">
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-card2)" stroke-width="16" />
+                </svg>
+                <div class="donut-center">
+                  <span class="dc-val" id="donutTotal">0</span>
+                  <span class="dc-label">items</span>
+                </div>
+              </div>
+              <div class="chart-legend" id="chartLegend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ITEMS VIEW -->
+        <div id="view-items" class="hidden">
+          <div class="filter-bar">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="searchInput" placeholder="Search items..." oninput="filterItems()">
+            </div>
+            <select class="filter-select" id="catFilter" onchange="filterItems()">
+              <option value="">All Categories</option>
+              <option>Food</option>
+              <option>Medicine</option>
+              <option>Documents</option>
+              <option>Cosmetics</option>
+              <option>Electronics</option>
+              <option>Custom</option>
+            </select>
+            <select class="filter-select" id="statusFilter" onchange="filterItems()">
+              <option value="">All Status</option>
+              <option value="expired">Expired</option>
+              <option value="soon">Expiring Soon</option>
+              <option value="safe">Safe</option>
+            </select>
+            <select class="filter-select" id="sortFilter" onchange="filterItems()">
+              <option value="expiry">Sort by Expiry</option>
+              <option value="name">Sort by Name</option>
+              <option value="cat">Sort by Category</option>
+              <option value="newest">Newest First</option>
+            </select>
+          </div>
+          <div class="items-grid" id="itemsGrid"></div>
+          <div id="itemsPagination" class="pagination"></div>
+        </div>
+
+        <!-- NOTIFICATIONS VIEW -->
+        <div id="view-notifications" class="hidden">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:20px">
+            <button class="btn btn-ghost btn-sm" onclick="markAllRead();renderNotifPage()">Mark all read</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearAllNotifs();renderNotifPage()">Clear all</button>
+          </div>
+          <div id="notifPageList" class="notif-page-list"></div>
+        </div>
+
+        <!-- SETTINGS VIEW -->
+        <div id="view-settings" class="hidden">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>👤 Account</h3>
+              <div class="form-group">
+                <label class="form-label">Display Name</label>
+                <input type="text" class="form-input" id="settingName" placeholder="Your name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-input" id="settingEmail" placeholder="your@email.com" disabled
+                  style="opacity:0.6">
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password <span style="color:var(--text-muted)">(leave blank to keep
+                    current)</span></label>
+                <input type="password" class="form-input" id="settingNewPass" placeholder="New password">
+              </div>
+              <button class="btn btn-primary mt-16" onclick="saveAccountSettings()">Save Changes</button>
+            </div>
+
+            <div class="settings-card">
+              <h3>🔔 Notification Preferences</h3>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Food Items</div>
+                  <div class="toggle-sub">Get alerts for food expiry</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="notifFood" checked onchange="saveNotifSettings()"><span
+                    class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Medicine</div>
+                  <div class="toggle-sub">Critical health alerts</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="notifMedicine" checked
+                    onchange="saveNotifSettings()"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Documents</div>
+                  <div class="toggle-sub">Important document expiry</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="notifDocuments" checked
+                    onchange="saveNotifSettings()"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Cosmetics</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="notifCosmetics" checked
+                    onchange="saveNotifSettings()"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Electronics</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="notifElectronics" checked
+                    onchange="saveNotifSettings()"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-slider-wrap">
+                <label>Default Alert <span id="defaultAlertVal">7</span> days before</label>
+                <input type="range" class="full-slider" id="defaultAlertSlider" min="1" max="30" value="7"
+                  oninput="document.getElementById('defaultAlertVal').textContent=this.value;saveNotifSettings()">
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>🎨 Appearance</h3>
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Light Mode</div>
+                  <div class="toggle-sub">Switch to light theme</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="themeToggle" onchange="toggleThemeFromSettings()"><span
+                    class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>🛰️ Background Notifications</h3>
+              <div id="swStatusBlock" style="margin-bottom:16px">
+                <div
+                  style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--radius-sm);background:var(--bg-input);border:1px solid var(--border)">
+                  <span id="swStatusDot"
+                    style="width:10px;height:10px;border-radius:50%;background:var(--text-muted);flex-shrink:0"></span>
+                  <div>
+                    <div style="font-size:0.85rem;font-weight:600" id="swStatusTxt">Checking…</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted)" id="swStatusSub">Service Worker status</div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="btn btn-primary full-width btn-sm" onclick="askNotifPermission()">🔔 Enable
+                  Notifications</button>
+                <button class="btn btn-ghost full-width btn-sm" onclick="testBackgroundNotif()">📣 Send Test
+                  Notification</button>
+                <button id="installAppBtn" class="btn btn-ghost full-width btn-sm hidden" onclick="installApp()"
+                  style="border-color:var(--amber);color:var(--amber)">📲 Install App (for browser-closed
+                  alerts)</button>
+                <button class="btn btn-ghost full-width btn-sm" onclick="recheckSW()">🔄 Re-register Service
+                  Worker</button>
+              </div>
+              <div class="divider"></div>
+              <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.6">
+                <b style="color:var(--amber)">How it works:</b> A Service Worker runs in your browser background. It
+                stores your items in an offline database (IndexedDB) and fires notifications even when this tab is fully
+                closed — as long as your browser is running.<br><br>
+                <b style="color:var(--amber)">Chrome/Edge:</b> Full support including Periodic Background Sync.<br>
+                <b style="color:var(--amber)">Firefox/Safari:</b> Notifications fire when browser is open.
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <button class="btn btn-ghost full-width" onclick="exportData()">📥 Export All Data (JSON)</button>
+              <button class="btn btn-danger full-width" onclick="confirmClearData()">🗑️ Clear All Items</button>
+              <button class="btn btn-danger full-width" onclick="confirmDeleteAccount()">💀 Delete Account</button>
+            </div>
+            <div class="divider"></div>
+            <div style="font-size:0.75rem;color:var(--text-muted);text-align:center">
+              ExpireGuard v1.0.0 — Built with ❤️<br>
+              All data stored locally in your browser
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content-area -->
+  </div><!-- end main-content -->
+
+  <!-- BOTTOM NAV (mobile) -->
+  <nav class="bottom-nav" id="bottomNav">
+    <div class="bn-item active" onclick="showView('dashboard')" id="bn-dashboard">
+      <span class="bn-icon">📊</span>Dashboard
+    </div>
+    <div class="bn-item" onclick="showView('items')" id="bn-items">
+      <span class="bn-icon">📦</span>Items
+    </div>
+    <div class="bn-item" onclick="openModal()" id="bn-add">
+      <span class="bn-icon">➕</span>Add
+    </div>
+    <div class="bn-item" onclick="showView('notifications')" id="bn-notifications" style="position:relative">
+      <span class="bn-icon">🔔</span>Alerts
+      <span class="bn-badge hidden" id="bnNotifBadge">0</span>
+    </div>
+    <div class="bn-item" onclick="showView('settings')" id="bn-settings">
+      <span class="bn-icon">⚙️</span>Settings
+    </div>
+  </nav>
+
+  </div><!-- end page-app -->
+
+  <!-- FAB -->
+  <div class="fab hidden" id="fabBtn" onclick="openModal()">+</div>
+
+  <script>
+    /* ════════════════════════════════════════════════════════
+       DATABASE (localStorage)
+    ════════════════════════════════════════════════════════ */
+    const DB = {
+      get(key) { try { return JSON.parse(localStorage.getItem('eg_' + key)) || null; } catch { return null; } },
+      set(key, val) { localStorage.setItem('eg_' + key, JSON.stringify(val)); },
+      remove(key) { localStorage.removeItem('eg_' + key); },
+      getUsers() { return this.get('users') || []; },
+      setUsers(u) { this.set('users', u); },
+      getItems(uid) { return (this.get('items') || []).filter(i => i.userId === uid); },
+      getAllItems() { return this.get('items') || []; },
+      setItems(items) { this.set('items', items); },
+      getNotifs(uid) { return (this.get('notifs') || []).filter(n => n.userId === uid); },
+      getAllNotifs() { return this.get('notifs') || []; },
+      setNotifs(n) { this.set('notifs', n); },
+      getSession() { return this.get('session'); },
+      setSession(s) { this.set('session', s); },
+      clearSession() { this.remove('session'); }
+    };
+
+    /* ════════════════════════════════════════════════════════
+       AUTH
+    ════════════════════════════════════════════════════════ */
+    let currentUser = null;
+    let currentView = 'dashboard';
+    let editingItemId = null;
+    let selectedCat = '';
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 10;
+    let confirmCallback = null;
+
+    function hashPass(p) { return btoa(p + 'eg_salt_2024'); }
+
+    function doRegister() {
+      const name = v('regName'), email = v('regEmail');
+      const pass = v('regPass'), pass2 = v('regPass2');
+      let ok = true;
+      if (!name.trim()) { showErr('regNameErr'); ok = false; } else hideErr('regNameErr');
+      if (!email.includes('@')) { showErr('regEmailErr'); ok = false; } else hideErr('regEmailErr');
+      if (pass.length < 6) { showErr('regPassErr'); ok = false; } else hideErr('regPassErr');
+      if (pass !== pass2) { showErr('regPass2Err'); ok = false; } else hideErr('regPass2Err');
+      if (!ok) return;
+
+      const users = DB.getUsers();
+      if (users.find(u => u.email === email)) {
+        showErr('regEmailErr', 'Email already registered'); return;
+      }
+      const user = {
+        id: uid(), name: name.trim(), email,
+        passwordHash: hashPass(pass),
+        createdAt: new Date().toISOString(),
+        settings: { alertDays: 7, notifFood: true, notifMedicine: true, notifDocuments: true, notifCosmetics: true, notifElectronics: true }
+      };
+      users.push(user);
+      DB.setUsers(users);
+      DB.setSession({ userId: user.id, remember: false });
+      currentUser = user;
+      toast('Account created! Welcome to ExpireGuard 🎉', 'success');
+      bootApp();
+    }
+
+    function doLogin() {
+      const email = v('loginEmail'), pass = v('loginPass');
+      let ok = true;
+      if (!email.includes('@')) { showErr('loginEmailErr'); ok = false; } else hideErr('loginEmailErr');
+      if (!pass) { showErr('loginPassErr', 'Please enter password'); ok = false; } else hideErr('loginPassErr');
+      if (!ok) return;
+
+      const users = DB.getUsers();
+      const user = users.find(u => u.email === email && u.passwordHash === hashPass(pass));
+      if (!user) { showErr('loginPassErr', 'Invalid email or password'); return; }
+      hideErr('loginPassErr');
+      const remember = document.getElementById('rememberMe').checked;
+      DB.setSession({ userId: user.id, remember });
+      currentUser = user;
+      toast(`Welcome back, ${user.name.split(' ')[0]}! 👋`, 'success');
+      bootApp();
+    }
+
+    function confirmLogout() {
+      showConfirm('Sign Out', 'Are you sure you want to sign out?', () => {
+        DB.clearSession();
+        currentUser = null;
+        showPage('login');
+        toast('Signed out successfully', 'info');
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       APP BOOT
+    ════════════════════════════════════════════════════════ */
+    function bootApp() {
+      showPage('app');
+      updateUserUI();
+      checkAndNotify();
+      showView('dashboard');
+      loadSettings();
+      // Delay permission request so it appears after page load (user gesture not required for first visit)
+      setTimeout(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission().then(p => {
+            if (p === 'granted') {
+              toast('🔔 Notifications enabled! You will get expiry alerts.', 'success', 4000);
+              sendPayloadToSW();
+              updateSWStatusUI();
+            } else {
+              toast('⚠️ Tap "Enable Notifications" in Settings to get alerts', 'warn', 5000);
+            }
+          });
+        }
+      }, 1500);
+    }
+
+    function init() {
+      const session = DB.getSession();
+      if (session) {
+        const users = DB.getUsers();
+        const user = users.find(u => u.id === session.userId);
+        if (user) { currentUser = user; bootApp(); return; }
+      }
+      showPage('login');
+    }
+
+    function updateUserUI() {
+      if (!currentUser) return;
+      const initials = currentUser.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const color = stringToColor(currentUser.name);
+      ['sidebarAvatar', 'topbarAvatar'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = initials; el.style.background = color; el.style.color = '#fff'; }
+      });
+      if (document.getElementById('sidebarUserName')) document.getElementById('sidebarUserName').textContent = currentUser.name;
+      if (document.getElementById('sidebarUserEmail')) document.getElementById('sidebarUserEmail').textContent = currentUser.email;
+      const hour = new Date().getHours();
+      const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      if (document.getElementById('topbarGreeting')) document.getElementById('topbarGreeting').textContent = `${greet}, ${currentUser.name.split(' ')[0]} 👋`;
+    }
+
+    /* ════════════════════════════════════════════════════════
+       PAGE & VIEW ROUTING
+    ════════════════════════════════════════════════════════ */
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      const fab = document.getElementById('fabBtn');
+      if (fab) fab.classList.toggle('hidden', name !== 'app');
+    }
+
+    function showView(name) {
+      currentView = name;
+      document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
+      document.getElementById('view-' + name).classList.remove('hidden');
+
+      // Update nav active states
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const navEl = document.getElementById('nav-' + name);
+      if (navEl) navEl.classList.add('active');
+
+      // Update bottom nav
+      document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
+      const bnEl = document.getElementById('bn-' + name);
+      if (bnEl) bnEl.classList.add('active');
+
+      // Update topbar title
+      const titles = { dashboard: 'Dashboard', items: 'All Items', notifications: 'Notifications', settings: 'Settings' };
+      if (document.getElementById('topbarTitle')) document.getElementById('topbarTitle').textContent = titles[name] || '';
+
+      // Render view
+      if (name === 'dashboard') renderDashboard();
+      else if (name === 'items') { currentPage = 1; filterItems(); }
+      else if (name === 'notifications') renderNotifPage();
+      else if (name === 'settings') loadSettings();
+
+      // Close mobile sidebar
+      document.getElementById('sidebar').classList.remove('mob-open');
+    }
+
+    function navigate(page) { showPage(page); }
+
+    /* ════════════════════════════════════════════════════════
+       DASHBOARD
+    ════════════════════════════════════════════════════════ */
+    function renderDashboard() {
+      const items = DB.getItems(currentUser.id);
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const userSettings = currentUser.settings || {};
+      const alertDays = userSettings.alertDays || 7;
+
+      let expired = 0, soon = 0, safe = 0;
+      items.forEach(item => {
+        const s = getStatus(item, alertDays);
+        if (s === 'expired') expired++;
+        else if (s === 'soon' || s === 'week') soon++;
+        else safe++;
+      });
+
+      document.getElementById('statTotal').textContent = items.length;
+      document.getElementById('statExpired').textContent = expired;
+      document.getElementById('statSoon').textContent = soon;
+      document.getElementById('statSafe').textContent = safe;
+      document.getElementById('statExpiredChange').textContent = expired > 0 ? `${expired} item${expired > 1 ? 's' : ''} expired!` : 'All good!';
+
+      // Timeline
+      const sorted = [...items].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      const tlEl = document.getElementById('timelineList');
+      if (sorted.length === 0) {
+        tlEl.innerHTML = '<div class="no-items-msg">No items yet. Add your first item using the + button!</div>';
+      } else {
+        tlEl.innerHTML = sorted.slice(0, 8).map(item => {
+          const s = getStatus(item, alertDays);
+          const daysLeft = getDaysLeft(item.expiryDate);
+          const label = daysLeft < 0 ? `${Math.abs(daysLeft)}d ago` : daysLeft === 0 ? 'Today!' : `${daysLeft}d left`;
+          return `<div class="timeline-item" onclick="showView('items')">
+        <div class="ti-dot ${s}"></div>
+        <div class="ti-info">
+          <div class="ti-name">${esc(item.name)}</div>
+          <div class="ti-cat">${item.category} · ${item.quantity || 1} ${item.unit || 'pcs'}</div>
+        </div>
+        <div class="ti-badge ${s}">${label}</div>
+      </div>`;
+        }).join('');
+      }
+
+      // Donut chart
+      renderDonut(items);
+    }
+
+    function renderDonut(items) {
+      const cats = ['Food', 'Medicine', 'Documents', 'Cosmetics', 'Electronics', 'Custom'];
+      const colors = ['#ff9f2e', '#ff4757', '#1e90ff', '#ff6b9d', '#2ed573', '#a855f7'];
+      const counts = cats.map(c => items.filter(i => i.category === c).length);
+      const total = items.length;
+      document.getElementById('donutTotal').textContent = total;
+
+      const svg = document.getElementById('donutSvg');
+      const R = 50, CX = 60, CY = 60, SW = 16;
+      const circ = 2 * Math.PI * R;
+      let offset = 0;
+
+      let circles = `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--bg-card2)" stroke-width="${SW}"/>`;
+      cats.forEach((cat, i) => {
+        if (counts[i] === 0) return;
+        const frac = counts[i] / (total || 1);
+        const dash = frac * circ;
+        circles += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${colors[i]}" stroke-width="${SW}" stroke-dasharray="${dash} ${circ - dash}" stroke-dashoffset="${-offset}" stroke-linecap="round" style="transition:stroke-dasharray 0.5s ease"/>`;
+        offset += dash;
+      });
+      svg.innerHTML = circles;
+
+      const legend = document.getElementById('chartLegend');
+      legend.innerHTML = cats.map((c, i) => counts[i] > 0 ? `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      <span class="legend-name">${c}</span>
+      <span class="legend-pct">${counts[i]} (${total ? Math.round(counts[i] / total * 100) : 0}%)</span>
+    </div>` : '').join('');
+    }
+
+    /* ════════════════════════════════════════════════════════
+       ITEMS CRUD
+    ════════════════════════════════════════════════════════ */
+    function openModal(itemId) {
+      editingItemId = itemId || null;
+      selectedCat = '';
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('modalTitle').textContent = itemId ? 'Edit Item' : 'Add New Item';
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemExpiry').value = '';
+      document.getElementById('itemQty').value = '';
+      document.getElementById('itemNotes').value = '';
+      document.getElementById('alertDays').value = currentUser?.settings?.alertDays || 7;
+      document.getElementById('alertDaysVal').textContent = (currentUser?.settings?.alertDays || 7) + ' days';
+      document.getElementById('saveItemTxt').textContent = itemId ? 'Update Item' : 'Save Item';
+
+      if (itemId) {
+        const item = DB.getAllItems().find(i => i.id === itemId);
+        if (item) {
+          document.getElementById('itemName').value = item.name;
+          document.getElementById('itemExpiry').value = item.expiryDate;
+          document.getElementById('itemQty').value = item.quantity || '';
+          document.getElementById('itemUnit').value = item.unit || 'pcs';
+          document.getElementById('itemNotes').value = item.notes || '';
+          document.getElementById('alertDays').value = item.alertDays || 7;
+          document.getElementById('alertDaysVal').textContent = (item.alertDays || 7) + ' days';
+          selectedCat = item.category;
+          const btn = document.querySelector(`.cat-btn[data-cat="${item.category}"]`);
+          if (btn) btn.classList.add('active');
+        }
+      }
+
+      ['itemNameErr', 'itemCatErr', 'itemExpiryErr'].forEach(hideErr);
+      document.getElementById('itemModal').classList.add('open');
+    }
+
+    function closeModal() { document.getElementById('itemModal').classList.remove('open'); }
+
+    function selectCat(btn) {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCat = btn.dataset.cat;
+      hideErr('itemCatErr');
+    }
+
+    function saveItem() {
+      const name = v('itemName'), expiry = v('itemExpiry');
+      let ok = true;
+      if (!name.trim()) { showErr('itemNameErr'); ok = false; } else hideErr('itemNameErr');
+      if (!selectedCat) { showErr('itemCatErr'); ok = false; } else hideErr('itemCatErr');
+      if (!expiry) { showErr('itemExpiryErr'); ok = false; } else hideErr('itemExpiryErr');
+      if (!ok) return;
+
+      const all = DB.getAllItems();
+      if (editingItemId) {
+        const idx = all.findIndex(i => i.id === editingItemId);
+        if (idx > -1) {
+          all[idx] = {
+            ...all[idx], name: name.trim(), category: selectedCat, expiryDate: expiry,
+            quantity: v('itemQty') || 1, unit: v('itemUnit'), notes: v('itemNotes'),
+            alertDays: parseInt(v('alertDays')) || 7, notified: []
+          };
+        }
+        toast('Item updated ✅', 'success');
+      } else {
+        all.push({
+          id: uid(), userId: currentUser.id, name: name.trim(), category: selectedCat,
+          expiryDate: expiry, quantity: v('itemQty') || 1, unit: v('itemUnit'),
+          notes: v('itemNotes'), alertDays: parseInt(v('alertDays')) || 7,
+          createdAt: new Date().toISOString(), notified: []
+        });
+        toast('Item added successfully! 🎉', 'success');
+      }
+      DB.setItems(all);
+      closeModal();
+      if (currentView === 'items') filterItems();
+      else if (currentView === 'dashboard') renderDashboard();
+      updateNotifBadge();
+      checkAndNotify();
+      // Push fresh payload into SW so background check uses latest items
+      sendPayloadToSW();
+      triggerSWCheck();
+    }
+
+    function deleteItem(id) {
+      showConfirm('Delete Item', 'This will permanently delete this item.', () => {
+        const all = DB.getAllItems().filter(i => i.id !== id);
+        DB.setItems(all);
+        toast('Item deleted', 'info');
+        if (currentView === 'items') filterItems();
+        else renderDashboard();
+        updateNotifBadge();
+        sendPayloadToSW();
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       ITEMS LIST & FILTER
+    ════════════════════════════════════════════════════════ */
+    function filterItems() {
+      let items = DB.getItems(currentUser.id);
+      const search = v('searchInput').toLowerCase();
+      const cat = v('catFilter');
+      const status = v('statusFilter');
+      const sort = v('sortFilter');
+      const alertDays = currentUser.settings?.alertDays || 7;
+
+      if (search) items = items.filter(i => i.name.toLowerCase().includes(search) || i.category.toLowerCase().includes(search));
+      if (cat) items = items.filter(i => i.category === cat);
+      if (status) items = items.filter(i => {
+        const s = getStatus(i, alertDays);
+        if (status === 'expired') return s === 'expired';
+        if (status === 'soon') return s === 'soon' || s === 'week';
+        if (status === 'safe') return s === 'safe';
+        return true;
+      });
+
+      if (sort === 'name') items.sort((a, b) => a.name.localeCompare(b.name));
+      else if (sort === 'cat') items.sort((a, b) => a.category.localeCompare(b.category));
+      else if (sort === 'newest') items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      else items.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+      renderItemsPage(items);
+    }
+
+    function renderItemsPage(items) {
+      const total = items.length;
+      const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+      if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const paged = items.slice(start, start + ITEMS_PER_PAGE);
+      const alertDays = currentUser.settings?.alertDays || 7;
+
+      const grid = document.getElementById('itemsGrid');
+      if (items.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No items found</h3><p>Try adjusting your filters or add new items</p></div>`;
+      } else {
+        grid.innerHTML = paged.map((item, i) => {
+          const s = getStatus(item, alertDays);
+          const daysLeft = getDaysLeft(item.expiryDate);
+          const label = daysLeft < 0 ? `Expired ${Math.abs(daysLeft)}d ago` : daysLeft === 0 ? 'Expires today!' : `Expires in ${daysLeft}d`;
+          const catEmoji = { Food: '🍎', Medicine: '💊', Documents: '📄', Cosmetics: '💄', Electronics: '🔋', Custom: '📦' };
+          return `<div class="item-card ${s}" style="animation-delay:${i * 0.04}s">
+        <div class="item-emoji">${catEmoji[item.category] || '📦'}</div>
+        <div class="item-info">
+          <div class="item-name">${esc(item.name)}</div>
+          <div class="item-meta">
+            <span>${item.category}</span>
+            <span>${item.quantity || 1} ${item.unit || 'pcs'}</span>
+            <span>${new Date(item.expiryDate).toLocaleDateString()}</span>
+            ${item.notes ? `<span title="${esc(item.notes)}">📝</span>` : ''}
+          </div>
+        </div>
+        <div class="ti-badge ${s}" style="margin-right:8px">${label}</div>
+        <div class="item-actions">
+          <div class="act-btn edit" onclick="openModal('${item.id}')" title="Edit">✏️</div>
+          <div class="act-btn del" onclick="deleteItem('${item.id}')" title="Delete">🗑️</div>
+        </div>
+      </div>`;
+        }).join('');
+      }
+
+      // Pagination
+      const pg = document.getElementById('itemsPagination');
+      if (totalPages <= 1) { pg.innerHTML = ''; return; }
+      let btns = '';
+      if (currentPage > 1) btns += `<div class="page-btn" onclick="goPage(${currentPage - 1})">‹</div>`;
+      for (let p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
+        btns += `<div class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</div>`;
+      }
+      if (currentPage < totalPages) btns += `<div class="page-btn" onclick="goPage(${currentPage + 1})">›</div>`;
+      pg.innerHTML = btns;
+    }
+
+    function goPage(p) { currentPage = p; filterItems(); }
+
+    /* ════════════════════════════════════════════════════════
+       NOTIFICATIONS
+    ════════════════════════════════════════════════════════ */
+    function checkAndNotify() {
+      if (!currentUser) return;
+      const items = DB.getItems(currentUser.id);
+      const settings = currentUser.settings || {};
+      const alertDays = settings.alertDays || 7;
+      const today = new Date().toDateString();
+      const all = DB.getAllItems();
+
+      items.forEach(item => {
+        const catKey = 'notif' + item.category;
+        if (settings[catKey] === false) return;
+
+        const daysLeft = getDaysLeft(item.expiryDate);
+        const notified = item.notified || [];
+        const todayKey = today;
+
+        let message = null, urgency = null;
+        if (daysLeft < 0) { message = `⚠️ ${item.name} has EXPIRED!`; urgency = 'expired'; }
+        else if (daysLeft <= 3) { message = `🔔 ${item.name} expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}!`; urgency = 'soon'; }
+        else if (daysLeft <= alertDays) { message = `📅 ${item.name} expires in ${daysLeft} days`; urgency = 'week'; }
+
+        if (message && !notified.includes(todayKey)) {
+          addNotif(message, urgency, item);
+          // Mark notified
+          const idx = all.findIndex(i => i.id === item.id);
+          if (idx > -1) { all[idx].notified = [...(all[idx].notified || []), todayKey]; }
+          // Browser notification
+          if (Notification.permission === 'granted') {
+            try {
+              new Notification('ExpireGuard Alert', {
+                body: message,
+                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏰</text></svg>',
+                tag: item.id
+              });
+            } catch (e) { }
+          }
+        }
+      });
+      DB.setItems(all);
+      updateNotifBadge();
+    }
+
+    function addNotif(message, urgency, item) {
+      const all = DB.getAllNotifs();
+      all.unshift({
+        id: uid(), userId: currentUser.id, message, urgency,
+        itemId: item?.id, category: item?.category,
+        timestamp: new Date().toISOString(), read: false
+      });
+      DB.setNotifs(all.slice(0, 100)); // Keep last 100
+    }
+
+    function renderNotifPanel() {
+      const notifs = DB.getNotifs(currentUser.id);
+      const el = document.getElementById('notifPanelList');
+      if (notifs.length === 0) {
+        el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔕</div><h3>All clear!</h3><p>No notifications yet</p></div>';
+      } else {
+        el.innerHTML = notifs.map(n => `
+      <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead('${n.id}')">
+        <div class="notif-icon">${urgencyIcon(n.urgency)}</div>
+        <div class="notif-body">
+          <div class="notif-title">${esc(n.message)}</div>
+          <div class="notif-time">${timeAgo(n.timestamp)}</div>
+        </div>
+      </div>`).join('');
+      }
+      const unread = notifs.filter(n => !n.read).length;
+      document.getElementById('unreadCountLabel').textContent = unread > 0 ? `${unread} unread` : 'All caught up';
+    }
+
+    function renderNotifPage() {
+      const notifs = DB.getNotifs(currentUser.id);
+      const el = document.getElementById('notifPageList');
+      if (notifs.length === 0) {
+        el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔕</div><h3>No notifications</h3><p>Your alerts will appear here</p></div>';
+      } else {
+        el.innerHTML = notifs.map(n => `
+      <div class="notif-page-item ${n.read ? '' : 'unread'}">
+        <div style="font-size:28px">${urgencyIcon(n.urgency)}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:0.875rem">${esc(n.message)}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${new Date(n.timestamp).toLocaleString()} · ${n.category || ''}</div>
+        </div>
+        ${!n.read ? `<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>` : ''}
+      </div>`).join('');
+      }
+      updateNotifBadge();
+    }
+
+    function openNotifPanel() {
+      document.getElementById('notifPanel').classList.add('open');
+      document.getElementById('notifOverlayBg').classList.add('open');
+      renderNotifPanel();
+    }
+    function closeNotifPanel() {
+      document.getElementById('notifPanel').classList.remove('open');
+      document.getElementById('notifOverlayBg').classList.remove('open');
+    }
+    function markNotifRead(id) {
+      const all = DB.getAllNotifs();
+      const idx = all.findIndex(n => n.id === id);
+      if (idx > -1) { all[idx].read = true; DB.setNotifs(all); }
+      renderNotifPanel();
+      updateNotifBadge();
+    }
+    function markAllRead() {
+      const all = DB.getAllNotifs().map(n => n.userId === currentUser.id ? { ...n, read: true } : n);
+      DB.setNotifs(all);
+      renderNotifPanel();
+      renderNotifPage();
+      updateNotifBadge();
+    }
+    function clearAllNotifs() {
+      const all = DB.getAllNotifs().filter(n => n.userId !== currentUser.id);
+      DB.setNotifs(all);
+      renderNotifPanel();
+      renderNotifPage();
+      updateNotifBadge();
+      toast('Notifications cleared', 'info');
+    }
+    function updateNotifBadge() {
+      if (!currentUser) return;
+      const count = DB.getNotifs(currentUser.id).filter(n => !n.read).length;
+      ['navNotifBadge', 'bnNotifBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (count > 0) { el.textContent = count > 9 ? '9+' : count; el.classList.remove('hidden'); }
+        else el.classList.add('hidden');
+      });
+      const dot = document.getElementById('notifDot');
+      const mdot = document.getElementById('mobileNotifDot');
+      if (dot) dot.classList.toggle('hidden', count === 0);
+      if (mdot) mdot.classList.toggle('hidden', count === 0);
+    }
+
+    function requestNotificationPermission() {
+      // Replaced by askNotifPermission() which is user-gesture driven
+      // This stub kept for compatibility
+    }
+
+    /* ════════════════════════════════════════════════════════
+       SERVICE WORKER — OFFLINE BACKGROUND NOTIFICATIONS
+       ─────────────────────────────────────────────────────
+       HOW THE BLOB URL TRICK WORKS:
+       Browsers block SW registration from blob: URLs that
+       don't match the page origin. The workaround is a
+       two-step shim:
+         1. Register a tiny "loader" SW from a Cache-stored
+            URL (/eg-sw-loader.js) that the page writes into
+            the Cache API first.
+         2. That loader calls importScripts() with the real
+            blob URL — this IS allowed because importScripts
+            runs in the SW context, not the page context.
+       This gives us a fully functional SW from a single
+       HTML file with no external server required.
+    ════════════════════════════════════════════════════════ */
+
+    /* ── Full SW logic (runs inside service worker) ── */
+    const _SW_LOGIC = `
+'use strict';
+
+/* IndexedDB helpers */
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('eg_sw_db',1);
+    r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('s'))d.createObjectStore('s');};
+    r.onsuccess=e=>res(e.target.result);
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+function idbGet(db,k){return new Promise((res,rej)=>{const r=db.transaction('s','readonly').objectStore('s').get(k);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});}
+function idbSet(db,k,v){return new Promise((res,rej)=>{const r=db.transaction('s','readwrite').objectStore('s').put(v,k);r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}
+
+const EG_ICON='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2285%22%3E%E2%8F%B0%3C/text%3E%3C/svg%3E';
+
+function daysLeft(dateStr){
+  const e=new Date(dateStr);e.setHours(0,0,0,0);
+  const n=new Date();n.setHours(0,0,0,0);
+  return Math.round((e-n)/86400000);
+}
+
+function makeNotif(item,alertDays){
+  const d=daysLeft(item.expiryDate);
+  if(d<0)  return {title:'ExpireGuard \u{1F6A8}',body:'\u26A0\uFE0F '+item.name+' has EXPIRED!',tag:item.id+'_exp',urgent:true};
+  if(d===0)return {title:'ExpireGuard \u{1F514}',body:'\u{1F514} '+item.name+' expires TODAY!',tag:item.id+'_d0',urgent:true};
+  if(d<=3) return {title:'ExpireGuard \u{1F514}',body:'\u{1F514} '+item.name+' expires in '+d+' day'+(d>1?'s':'')+'!',tag:item.id+'_d'+d,urgent:true};
+  if(d<=(alertDays||7))return {title:'ExpireGuard \u{1F4C5}',body:'\u{1F4C5} '+item.name+' expires in '+d+' days',tag:item.id+'_w',urgent:false};
+  return null;
+}
+
+async function runCheck(){
+  const db=await idbOpen();
+  const payload=await idbGet(db,'payload');
+  if(!payload||!payload.items||!payload.items.length)return;
+  const {items,alertDays=7}=payload;
+  const today=new Date().toDateString();
+  let fired=await idbGet(db,'fired_'+today)||{};
+  let count=0;
+  for(const item of items){
+    const n=makeNotif(item,alertDays);
+    if(!n||fired[item.id])continue;
+    fired[item.id]=1;count++;
+    await self.registration.showNotification(n.title,{
+      body:n.body,tag:n.tag,icon:EG_ICON,badge:EG_ICON,
+      requireInteraction:n.urgent,
+      vibrate:n.urgent?[200,100,200]:[100],
+      data:{itemId:item.id}
+    });
+  }
+  if(count>0)await idbSet(db,'fired_'+today,fired);
+  const cls=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  cls.forEach(c=>c.postMessage({type:'EG_NOTIFIED',count}));
+}
+
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+
+self.addEventListener('message',async e=>{
+  if(!e.data)return;
+  if(e.data.type==='STORE'){
+    const db=await idbOpen();
+    await idbSet(db,'payload',{items:e.data.items,alertDays:e.data.alertDays});
+    runCheck();
+  }
+  if(e.data.type==='CHECK')runCheck();
+});
+
+self.addEventListener('periodicsync',e=>{
+  if(e.tag==='eg-check')e.waitUntil(runCheck());
+});
+
+self.addEventListener('push',e=>{
+  const d=e.data?e.data.json():{};
+  e.waitUntil(self.registration.showNotification(d.title||'ExpireGuard',{body:d.body||'Check your items',icon:EG_ICON}));
+});
+
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cls=>{
+      const m=cls.find(c=>c.url.includes(self.location.hostname)||c.url.startsWith('file://'));
+      return m?m.focus():self.clients.openWindow('./');
+    })
+  );
+});
+
+/* Heartbeat: re-check every hour while browser is open */
+setInterval(runCheck, 60*60*1000);
+`;
+
+    /* ── Loader shim: registered as the real SW URL ──
+       It intercepts its own fetch so it can serve the
+       actual SW code without needing a real .js file.   */
+    const _SW_LOADER = `
+/* ExpireGuard SW Loader — auto-generated */
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',e=>{
+  if(e.request.url.includes('__eg_sw_logic__')){
+    e.respondWith(caches.open('eg-sw-v1').then(c=>c.match('__eg_sw_logic__')));
+  }
+});
+/* Main logic will be injected via message after registration */
+self.addEventListener('message',e=>{
+  if(e.data&&e.data.type==='INJECT'){
+    try{ eval(e.data.code); }catch(err){ console.error('EG SW inject err',err); }
+  }
+});
+`;
+
+    let _swReg = null;
+    let _swReady = false;
+    // True when running on http:// (local server) — sw.js can be registered directly
+    const _isHttp = location.protocol === 'http:' || location.protocol === 'https:';
+
+    async function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) {
+        console.warn('ExpireGuard: SW not supported — using in-page polling only');
+        _startInPagePolling();
+        return;
+      }
+
+      try {
+        // Unregister stale blob SWs from old sessions
+        const existing = await navigator.serviceWorker.getRegistrations();
+        for (const r of existing) {
+          if (r.active?.scriptURL?.startsWith('blob:')) { await r.unregister(); }
+        }
+
+        if (_isHttp) {
+          // === HTTP MODE: register sw.js directly for true persistence ===
+          _swReg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+          console.log('ExpireGuard: sw.js registered ✅');
+        } else {
+          // === FILE:// FALLBACK: blob shim (limited, no browser-closed support) ===
+          const cache = await caches.open('eg-sw-v1');
+          await cache.put('__eg_sw_logic__',
+            new Response(_SW_LOGIC, { headers: { 'Content-Type': 'application/javascript' } })
+          );
+          const loaderUrl = URL.createObjectURL(new Blob([_SW_LOADER], { type: 'application/javascript' }));
+          _swReg = await navigator.serviceWorker.register(loaderUrl, { scope: './' });
+          console.log('ExpireGuard: blob SW registered (file:// mode)');
+        }
+
+        await _waitForSWActive(_swReg);
+
+        // Inject logic for blob shim
+        if (!_isHttp) {
+          const ctrl = navigator.serviceWorker.controller || _swReg.active;
+          if (ctrl) ctrl.postMessage({ type: 'INJECT', code: _SW_LOGIC });
+        }
+
+        _swReady = true;
+
+        // Register Periodic Background Sync if available (PWA installed on Chrome/Edge)
+        if (_isHttp && 'periodicSync' in _swReg) {
+          try {
+            const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
+            if (perm.state === 'granted') {
+              await _swReg.periodicSync.register('eg-check', { minInterval: 60 * 60 * 1000 });
+              console.log('ExpireGuard: periodicSync registered ✅');
+            }
+          } catch (_) { }
+        }
+        if (_isHttp && 'sync' in _swReg) {
+          try { await _swReg.sync.register('eg-check'); } catch (_) { }
+        }
+
+        // Push item data to SW so it can fire notifications independently
+        sendPayloadToSW();
+
+        // Listen for SW → page messages
+        navigator.serviceWorker.addEventListener('message', e => {
+          if (e.data?.type === 'EG_NOTIFIED' && e.data.count > 0 && currentUser) {
+            checkAndNotify();
+          }
+        });
+
+        // Re-sync on tab focus
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') sendPayloadToSW();
+        });
+
+        // Re-inject blob logic on controller change
+        if (!_isHttp) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            const c = navigator.serviceWorker.controller;
+            if (c) c.postMessage({ type: 'INJECT', code: _SW_LOGIC });
+          });
+        }
+
+        updateSWStatusUI();
+        setupInstallPrompt();
+
+      } catch (err) {
+        console.warn('ExpireGuard: SW registration failed —', err.message, '— using in-page polling');
+        _startInPagePolling();
+      }
+    }
+
+    function _waitForSWActive(reg) {
+      return new Promise(resolve => {
+        if (reg.active) { resolve(); return; }
+        const worker = reg.installing || reg.waiting;
+        if (!worker) { resolve(); return; }
+        worker.addEventListener('statechange', function handler() {
+          if (this.state === 'activated') {
+            this.removeEventListener('statechange', handler);
+            resolve();
+          }
+        });
+        // Safety timeout
+        setTimeout(resolve, 4000);
+      });
+    }
+
+    /* In-page polling fallback (runs when SW unavailable) */
+    function _startInPagePolling() {
+      setInterval(() => { if (currentUser) checkAndNotify(); }, 30 * 60 * 1000);
+    }
+
+    /* Send item payload to SW so it can fire notifications offline */
+    function sendPayloadToSW() {
+      if (!currentUser) return;
+      const items = DB.getItems(currentUser.id);
+      const alertDays = currentUser.settings?.alertDays || 7;
+      const msg = { type: 'STORE', items, alertDays };
+      // Try active controller first, fall back to reg.active
+      const ctrl = navigator.serviceWorker?.controller || _swReg?.active;
+      if (ctrl) {
+        ctrl.postMessage(msg);
+      } else if (_swReg) {
+        // SW not yet controlling — wait for it
+        navigator.serviceWorker.ready.then(reg => {
+          (reg.active || reg.waiting)?.postMessage(msg);
+        });
+      }
+    }
+
+    /* Trigger an immediate expiry check inside the SW */
+    function triggerSWCheck() {
+      const ctrl = navigator.serviceWorker?.controller || _swReg?.active;
+      if (ctrl) ctrl.postMessage({ type: 'CHECK' });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       SETTINGS
+    ════════════════════════════════════════════════════════ */
+    function loadSettings() {
+      if (!currentUser) return;
+      const s = currentUser.settings || {};
+      document.getElementById('settingName').value = currentUser.name;
+      document.getElementById('settingEmail').value = currentUser.email;
+      document.getElementById('notifFood').checked = s.notifFood !== false;
+      document.getElementById('notifMedicine').checked = s.notifMedicine !== false;
+      document.getElementById('notifDocuments').checked = s.notifDocuments !== false;
+      document.getElementById('notifCosmetics').checked = s.notifCosmetics !== false;
+      document.getElementById('notifElectronics').checked = s.notifElectronics !== false;
+      const ad = s.alertDays || 7;
+      document.getElementById('defaultAlertSlider').value = ad;
+      document.getElementById('defaultAlertVal').textContent = ad;
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      document.getElementById('themeToggle').checked = isLight;
+      updateSWStatusUI();
+    }
+
+    function updateSWStatusUI() {
+      const dot = document.getElementById('swStatusDot');
+      const txt = document.getElementById('swStatusTxt');
+      const sub = document.getElementById('swStatusSub');
+      if (!dot) return;
+
+      const hasSW = 'serviceWorker' in navigator;
+      const hasCtl = hasSW && !!navigator.serviceWorker.controller;
+      const notif = 'Notification' in window ? Notification.permission : 'unsupported';
+
+      if (!hasSW) {
+        dot.style.background = 'var(--red)';
+        txt.textContent = 'Not supported';
+        sub.textContent = 'Your browser does not support Service Workers';
+        return;
+      }
+      if (hasCtl && notif === 'granted') {
+        dot.style.background = 'var(--green)';
+        dot.style.boxShadow = '0 0 8px var(--green)';
+        txt.textContent = '✅ Active — background alerts enabled';
+        sub.textContent = 'You\'ll receive notifications even when the app is closed';
+      } else if (hasCtl && notif !== 'granted') {
+        dot.style.background = '#ffd700';
+        txt.textContent = '⚠️ Service Worker active — notifications blocked';
+        sub.textContent = 'Allow notifications in your browser to get background alerts';
+      } else {
+        dot.style.background = 'var(--amber)';
+        txt.textContent = '⏳ Registering Service Worker…';
+        sub.textContent = 'Refresh if this persists';
+        // Retry in 2s
+        setTimeout(updateSWStatusUI, 2000);
+      }
+    }
+
+    /* Ask for notification permission (called from button click — user gesture) */
+    function askNotifPermission() {
+      if (!('Notification' in window)) { toast('❌ Notifications not supported in this browser', 'error'); return; }
+      if (Notification.permission === 'granted') {
+        toast('✅ Notifications are already enabled!', 'success');
+        sendPayloadToSW();
+        updateSWStatusUI();
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        toast('⚠️ Notifications are blocked. Click the 🔒 lock icon in the address bar → allow notifications', 'warn', 7000);
+        return;
+      }
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') {
+          toast('🔔 Notifications enabled! Background alerts are now active.', 'success', 4000);
+          sendPayloadToSW();
+          updateSWStatusUI();
+        } else {
+          toast('⚠️ Notification permission denied. Go to browser settings to allow.', 'warn', 5000);
+        }
+      });
+    }
+
+    function testBackgroundNotif() {
+      if (Notification.permission !== 'granted') {
+        askNotifPermission();
+        return;
+      }
+      // Show a real notification immediately via SW registration (works even with tab in background)
+      const doNotif = () => {
+        const reg = _swReg;
+        if (reg && reg.active) {
+          reg.showNotification('🔔 ExpireGuard Test', {
+            body: 'Background notifications are working! You will get alerts even when the tab is closed.',
+            icon: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2285%22%3E%E2%8F%B0%3C/text%3E%3C/svg%3E',
+            badge: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2285%22%3E%E2%8F%B0%3C/text%3E%3C/svg%3E',
+            tag: 'eg-test',
+            requireInteraction: false,
+            vibrate: [200, 100, 200],
+            data: { url: location.href }
+          }).then(() => toast('✅ Test notification sent! Check your system tray.', 'success', 4000))
+            .catch(() => {
+              new Notification('🔔 ExpireGuard Test', { body: 'Notifications are working!' });
+              toast('✅ Test notification sent!', 'success', 4000);
+            });
+        } else {
+          new Notification('🔔 ExpireGuard Test', {
+            body: 'Notifications are working! Install the app for browser-closed alerts.'
+          });
+          toast('✅ Test notification sent!', 'success', 4000);
+        }
+      };
+      doNotif();
+      // Also tell the SW to run a full check and fire real item alerts
+      const ctrl = navigator.serviceWorker?.controller || _swReg?.active;
+      if (ctrl) ctrl.postMessage({ type: 'CHECK_NOW' });
+    }
+
+    /* PWA Install Prompt */
+    let _deferredInstall = null;
+    function setupInstallPrompt() {
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        _deferredInstall = e;
+        const btn = document.getElementById('installAppBtn');
+        if (btn) btn.classList.remove('hidden');
+        console.log('ExpireGuard: install prompt ready');
+      });
+      window.addEventListener('appinstalled', () => {
+        _deferredInstall = null;
+        const btn = document.getElementById('installAppBtn');
+        if (btn) btn.classList.add('hidden');
+        toast('✅ App installed! Background notifications are now fully active.', 'success', 5000);
+      });
+    }
+
+    function installApp() {
+      if (_deferredInstall) {
+        _deferredInstall.prompt();
+        _deferredInstall.userChoice.then(r => {
+          if (r.outcome === 'accepted') toast('🎉 ExpireGuard installed! Background alerts active.', 'success', 5000);
+          _deferredInstall = null;
+          document.getElementById('installAppBtn')?.classList.add('hidden');
+        });
+      } else {
+        toast('ℹ️ Open in Chrome and click the install icon (⊕) in the address bar, or Menu → Install ExpireGuard', 'info', 7000);
+      }
+    }
+
+    async function recheckSW() {
+      toast('Re-registering Service Worker…', 'info');
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+      }
+      _swReg = null;
+      _swReady = false;
+      await registerServiceWorker();
+      setTimeout(() => {
+        updateSWStatusUI();
+        sendPayloadToSW();
+        toast('Service Worker re-registered ✅', 'success');
+      }, 3000);
+    }
+
+    function saveAccountSettings() {
+      const name = document.getElementById('settingName').value.trim();
+      const newPass = document.getElementById('settingNewPass').value;
+      if (!name) { toast('Name cannot be empty', 'error'); return; }
+
+      const users = DB.getUsers();
+      const idx = users.findIndex(u => u.id === currentUser.id);
+      if (idx > -1) {
+        users[idx].name = name;
+        if (newPass && newPass.length >= 6) users[idx].passwordHash = hashPass(newPass);
+        else if (newPass && newPass.length < 6) { toast('Password must be at least 6 chars', 'error'); return; }
+        DB.setUsers(users);
+        currentUser = users[idx];
+        updateUserUI();
+        document.getElementById('settingNewPass').value = '';
+        toast('Account updated successfully ✅', 'success');
+      }
+    }
+
+    function saveNotifSettings() {
+      const settings = {
+        alertDays: parseInt(document.getElementById('defaultAlertSlider').value),
+        notifFood: document.getElementById('notifFood').checked,
+        notifMedicine: document.getElementById('notifMedicine').checked,
+        notifDocuments: document.getElementById('notifDocuments').checked,
+        notifCosmetics: document.getElementById('notifCosmetics').checked,
+        notifElectronics: document.getElementById('notifElectronics').checked,
+      };
+      const users = DB.getUsers();
+      const idx = users.findIndex(u => u.id === currentUser.id);
+      if (idx > -1) {
+        users[idx].settings = { ...users[idx].settings, ...settings };
+        DB.setUsers(users);
+        currentUser = users[idx];
+      }
+    }
+
+    function exportData() {
+      const data = {
+        user: { name: currentUser.name, email: currentUser.email, exportDate: new Date().toISOString() },
+        items: DB.getItems(currentUser.id),
+        notifications: DB.getNotifs(currentUser.id)
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `expireguard-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      toast('Data exported successfully 📥', 'success');
+    }
+
+    function confirmClearData() {
+      showConfirm('Clear All Items', 'This will permanently delete all your tracked items.', () => {
+        const all = DB.getAllItems().filter(i => i.userId !== currentUser.id);
+        DB.setItems(all);
+        toast('All items cleared', 'info');
+        renderDashboard();
+      });
+    }
+
+    function confirmDeleteAccount() {
+      showConfirm('Delete Account', 'This will permanently delete your account and all data. This cannot be undone.', () => {
+        DB.setUsers(DB.getUsers().filter(u => u.id !== currentUser.id));
+        DB.setItems(DB.getAllItems().filter(i => i.userId !== currentUser.id));
+        DB.setNotifs(DB.getAllNotifs().filter(n => n.userId !== currentUser.id));
+        DB.clearSession();
+        currentUser = null;
+        showPage('login');
+        toast('Account deleted', 'info');
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════
+       THEME
+    ════════════════════════════════════════════════════════ */
+    function toggleTheme() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+      document.getElementById('themeBtn').textContent = isLight ? '🌙' : '☀️';
+      localStorage.setItem('eg_theme', isLight ? 'dark' : 'light');
+      const toggle = document.getElementById('themeToggle');
+      if (toggle) toggle.checked = !isLight;
+    }
+    function toggleThemeFromSettings() {
+      toggleTheme();
+    }
+    function loadTheme() {
+      const t = localStorage.getItem('eg_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.textContent = t === 'light' ? '☀️' : '🌙';
+    }
+
+    /* ════════════════════════════════════════════════════════
+       CONFIRM DIALOG
+    ════════════════════════════════════════════════════════ */
+    function showConfirm(title, msg, cb) {
+      confirmCallback = cb;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMsg').textContent = msg;
+      document.getElementById('confirmOverlay').classList.add('open');
+    }
+    function confirmCancel() {
+      document.getElementById('confirmOverlay').classList.remove('open');
+      confirmCallback = null;
+    }
+    document.getElementById('confirmOkBtn').onclick = () => {
+      confirmCancel();
+      if (confirmCallback) confirmCallback();
+    };
+
+    /* ════════════════════════════════════════════════════════
+       TOAST SYSTEM
+    ════════════════════════════════════════════════════════ */
+    function toast(msg, type = 'info', duration = 3500) {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span style="flex:1">${msg}</span><button class="toast-close" onclick="removeToast(this.parentElement)">✕</button>`;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => removeToast(el), duration);
+    }
+    function removeToast(el) {
+      if (!el || !el.parentElement) return;
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 300);
+    }
+
+    /* ════════════════════════════════════════════════════════
+       MOBILE SIDEBAR
+    ════════════════════════════════════════════════════════ */
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('mob-open');
+    }
+
+    /* ════════════════════════════════════════════════════════
+       HELPERS
+    ════════════════════════════════════════════════════════ */
+    function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function showErr(id, msg) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (msg) el.textContent = msg;
+      el.classList.add('show');
+      const input = el.previousElementSibling;
+      if (input && input.classList.contains('form-input')) input.classList.add('error');
+    }
+    function hideErr(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('show');
+      const input = el.previousElementSibling;
+      if (input && input.classList.contains('form-input')) input.classList.remove('error');
+    }
+    function getDaysLeft(dateStr) {
+      const exp = new Date(dateStr); exp.setHours(0, 0, 0, 0);
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      return Math.round((exp - now) / 86400000);
+    }
+    function getStatus(item, alertDays = 7) {
+      const d = getDaysLeft(item.expiryDate);
+      if (d < 0) return 'expired';
+      if (d <= 3) return 'soon';
+      if (d <= alertDays) return 'week';
+      return 'safe';
+    }
+    function urgencyIcon(u) {
+      if (u === 'expired') return '🚨';
+      if (u === 'soon') return '🔔';
+      if (u === 'week') return '📅';
+      return 'ℹ️';
+    }
+    function timeAgo(ts) {
+      const diff = Date.now() - new Date(ts).getTime();
+      const m = Math.floor(diff / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+      if (d > 0) return `${d}d ago`;
+      if (h > 0) return `${h}h ago`;
+      if (m > 0) return `${m}m ago`;
+      return 'just now';
+    }
+    function stringToColor(str) {
+      let hash = 0;
+      for (let c of str) hash = c.charCodeAt(0) + ((hash << 5) - hash);
+      const colors = ['#ff9f2e', '#ff4757', '#2ed573', '#1e90ff', '#a855f7', '#ff6b35', '#00cec9'];
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    /* ════════════════════════════════════════════════════════
+       KEYBOARD SHORTCUTS
+    ════════════════════════════════════════════════════════ */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeNotifPanel();
+        confirmCancel();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k' && currentUser) {
+        e.preventDefault();
+        openModal();
+      }
+    });
+
+    // Close modal on overlay click
+    document.getElementById('itemModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    /* ════════════════════════════════════════════════════════
+       BOOT
+    ════════════════════════════════════════════════════════ */
+    loadTheme();
+    registerServiceWorker();
+    init();
+
+    // Periodic check every 30 minutes
+    setInterval(() => { if (currentUser) checkAndNotify(); }, 1800000);
+
+    // Add sample data for first-time users
+    window.__addSampleData = function () {
+      if (!currentUser) return;
+      const samples = [
+        { name: '🥛 Whole Milk', category: 'Food', expiryDate: offsetDate(3) },
+        { name: '💊 Ibuprofen', category: 'Medicine', expiryDate: offsetDate(30) },
+        { name: '🍞 Sourdough Bread', category: 'Food', expiryDate: offsetDate(-2) },
+        { name: '🪥 Toothpaste', category: 'Cosmetics', expiryDate: offsetDate(180) },
+        { name: '📄 Passport', category: 'Documents', expiryDate: offsetDate(365) },
+        { name: '🔋 AA Batteries', category: 'Electronics', expiryDate: offsetDate(7) },
+        { name: '🧴 Sunscreen SPF50', category: 'Cosmetics', expiryDate: offsetDate(6) },
+        { name: '💊 Vitamin D', category: 'Medicine', expiryDate: offsetDate(90) },
+      ];
+      const all = DB.getAllItems();
+      samples.forEach(s => all.push({
+        id: uid(), userId: currentUser.id, ...s,
+        quantity: 1, unit: 'pcs', notes: '', alertDays: 7,
+        createdAt: new Date().toISOString(), notified: []
+      }));
+      DB.setItems(all);
+      renderDashboard();
+      toast('Sample data loaded! 🎉', 'success');
+    };
+    function offsetDate(days) {
+      const d = new Date(); d.setDate(d.getDate() + days);
+      return d.toISOString().split('T')[0];
+    }
+  </script>
+</body>
+
+</html>

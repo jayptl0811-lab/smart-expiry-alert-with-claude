@@ -1,0 +1,20 @@
+{
+  "name": "ExpireGuard",
+  "short_name": "ExpireGuard",
+  "description": "Never let things expire again — smart expiry alerts for all your items.",
+  "start_url": "./expiry_alert.html",
+  "display": "standalone",
+  "background_color": "#080c14",
+  "theme_color": "#ff9f2e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏰</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en"
+}
